@@ -96,7 +96,7 @@ import Product from "../models/product.model.js";
     try {
         const products = await Product.aggregate([
             {
-                $sample: {size:3}
+                $sample: {size:4},
             },
             {
                 $project:{
@@ -105,9 +105,9 @@ import Product from "../models/product.model.js";
                     description:1,
                     image:1,
                     price:1
-                }
-            }
-        ])
+                },
+            },
+        ]);
 
      res.json(products);
     } catch (error) {
