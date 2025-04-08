@@ -12,20 +12,21 @@ export const createCheckoutSession = async (req,res) => {
 
         let totalAmount = 0;
 
-        const lineItems = products.map(products => {
-            const amount = Math.round(products.price * 100)//stripe wants u to send in the format of cents
-            totalAmount += amount *products.quantity
+        const lineItems = products.map((product) => {
+            const amount = Math.round(product.price * 100)//stripe wants u to send in the format of cents
+            totalAmount += amount *product.quantity;
 
             return{
                 price_data:{
                     currency:"usd",
                     product_data:{
-                        name:products.name,
-                        image:[products.image],
+                        name:product.name,
+                        images:[product.image],
                     },
-                    unit_amount:amount
-                }
-            }
+                    unit_amount:amount,
+                },
+                quantity: product.quantity || 1,
+            };
         });
 
         let coupon = null;
@@ -37,8 +38,8 @@ export const createCheckoutSession = async (req,res) => {
             }
         }
 
-        const session = await stripe.checkout.session.create({
-            payment_method_type:["card",],
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types:["card"],
             line_items: lineItems,
             mode:"payment",
             success_url:`${process.env.CLIENT_URL}/purchase-success?session_id={CHECKOUT_SESSION_ID}`,
@@ -77,7 +78,7 @@ export const createCheckoutSession = async (req,res) => {
 export const checkoutSuccess = async (req,res) =>{
     try {
         const {sessionId} =req.body;
-        const session = await stripe.checkout.retrieve(sessionId);
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
 
         if(session.payment_status === "paid"){
 
@@ -98,10 +99,10 @@ export const checkoutSuccess = async (req,res) =>{
             products:products.map((product) => ({
                 product:product.id,
                 quantity: product.quantity,
-                price: product.price
+                price: product.price,
             })),
             totalAmount: session.amount_total / 100, // convert cents to dollers
-            stripeSessionId: sessionId
+            stripeSessionId: sessionId,
         });
 
         await newOrder.save();
@@ -113,7 +114,7 @@ export const checkoutSuccess = async (req,res) =>{
         });
     }
     } catch (error) {
-        console.log.error("Error processing successful checkout:",error);
+        console.error("Error processing successful checkout:",error);
         res.status(500).json({message:"Error processing successful checkout",error: error.message});
     }
 };
